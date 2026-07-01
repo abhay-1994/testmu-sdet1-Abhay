@@ -1,0 +1,392 @@
+[
+  {
+    "id": "API-AUTH-001",
+    "module": "API",
+    "area": "auth_token_validation",
+    "title": "Login with valid credentials returns a bearer token",
+    "method": "POST",
+    "endpoint": "/auth/login",
+    "preconditions": "A registered, active user account exists.",
+    "steps": [
+      "Send POST /auth/login with a valid username and password in the request body.",
+      "Inspect the response."
+    ],
+    "expectedResult": "Status 200. Response body contains a non-empty 'token' field and a 'user' object with at least 'id' and 'username'.",
+    "priority": "high"
+  },
+  {
+    "id": "API-AUTH-002",
+    "module": "API",
+    "area": "auth_token_validation",
+    "title": "Login with invalid credentials is rejected",
+    "method": "POST",
+    "endpoint": "/auth/login",
+    "preconditions": "A registered, active user account exists.",
+    "steps": [
+      "Send POST /auth/login with the correct username and an incorrect password.",
+      "Inspect the response."
+    ],
+    "expectedResult": "Status 401. Response body contains an error message that does not reveal whether the username exists.",
+    "priority": "high"
+  },
+  {
+    "id": "API-AUTH-003",
+    "module": "API",
+    "area": "auth_token_validation",
+    "title": "Protected endpoint rejects requests with no Authorization header",
+    "method": "GET",
+    "endpoint": "/api/testcases",
+    "preconditions": "None.",
+    "steps": [
+      "Send GET /api/testcases with no Authorization header.",
+      "Inspect the response."
+    ],
+    "expectedResult": "Status 401. Response body contains an error message indicating authentication is required.",
+    "priority": "high"
+  },
+  {
+    "id": "API-AUTH-004",
+    "module": "API",
+    "area": "auth_token_validation",
+    "title": "Protected endpoint rejects a malformed token",
+    "method": "GET",
+    "endpoint": "/api/testcases",
+    "preconditions": "None.",
+    "steps": [
+      "Send GET /api/testcases with 'Authorization: Bearer not-a-real-token'.",
+      "Inspect the response."
+    ],
+    "expectedResult": "Status 401. Response body indicates the token is invalid.",
+    "priority": "medium"
+  },
+  {
+    "id": "API-AUTH-005",
+    "module": "API",
+    "area": "auth_token_validation",
+    "title": "Protected endpoint rejects an expired token",
+    "method": "GET",
+    "endpoint": "/api/testcases",
+    "preconditions": "A previously-valid token exists but has passed its expiry time.",
+    "steps": [
+      "Send GET /api/testcases with the expired token.",
+      "Inspect the response."
+    ],
+    "expectedResult": "Status 401. Response body indicates the token has expired (distinct message from 'invalid token' if the API differentiates).",
+    "priority": "high"
+  },
+  {
+    "id": "API-AUTH-006",
+    "module": "API",
+    "area": "auth_token_validation",
+    "title": "A valid token for a low-privilege user is rejected on an admin-only endpoint",
+    "method": "DELETE",
+    "endpoint": "/api/testcases/{id}",
+    "preconditions": "A valid token exists for a user without delete permission.",
+    "steps": [
+      "Send DELETE /api/testcases/{id} using a valid token belonging to a read-only user.",
+      "Inspect the response."
+    ],
+    "expectedResult": "Status 403. Response body indicates insufficient permissions. The resource is not deleted.",
+    "priority": "high"
+  },
+  {
+    "id": "API-CRUD-001",
+    "module": "API",
+    "area": "crud",
+    "title": "Create a new test case with valid data",
+    "method": "POST",
+    "endpoint": "/api/testcases",
+    "preconditions": "Caller has a valid token with write permission.",
+    "steps": [
+      "Send POST /api/testcases with a valid body: { title, priority, status: 'draft' }.",
+      "Inspect the response."
+    ],
+    "expectedResult": "Status 201. Response body contains the created resource with a generated 'id' and a 'createdAt' timestamp, and echoes the submitted fields.",
+    "priority": "high"
+  },
+  {
+    "id": "API-CRUD-002",
+    "module": "API",
+    "area": "crud",
+    "title": "Retrieve an existing test case by id",
+    "method": "GET",
+    "endpoint": "/api/testcases/{id}",
+    "preconditions": "A test case with a known id exists.",
+    "steps": [
+      "Send GET /api/testcases/{id} for the known id.",
+      "Inspect the response."
+    ],
+    "expectedResult": "Status 200. Response body matches the previously created/known resource.",
+    "priority": "high"
+  },
+  {
+    "id": "API-CRUD-003",
+    "module": "API",
+    "area": "crud",
+    "title": "List all test cases with pagination",
+    "method": "GET",
+    "endpoint": "/api/testcases",
+    "preconditions": "More test cases exist than fit on a single page.",
+    "steps": [
+      "Send GET /api/testcases?page=1&pageSize=20.",
+      "Inspect the response."
+    ],
+    "expectedResult": "Status 200. Response body is an array of at most 20 items plus pagination metadata (total count, current page).",
+    "priority": "medium"
+  },
+  {
+    "id": "API-CRUD-004",
+    "module": "API",
+    "area": "crud",
+    "title": "Update an existing test case's status",
+    "method": "PUT",
+    "endpoint": "/api/testcases/{id}",
+    "preconditions": "A test case with a known id exists and is in 'draft' status.",
+    "steps": [
+      "Send PUT /api/testcases/{id} with { status: 'active' }.",
+      "Send GET /api/testcases/{id} to re-fetch the resource."
+    ],
+    "expectedResult": "PUT returns status 200 with the updated resource. The subsequent GET reflects status 'active', confirming the update persisted.",
+    "priority": "high"
+  },
+  {
+    "id": "API-CRUD-005",
+    "module": "API",
+    "area": "crud",
+    "title": "Delete a test case and confirm it no longer exists",
+    "method": "DELETE",
+    "endpoint": "/api/testcases/{id}",
+    "preconditions": "A test case with a known id exists.",
+    "steps": [
+      "Send DELETE /api/testcases/{id}.",
+      "Send GET /api/testcases/{id} for the same id."
+    ],
+    "expectedResult": "DELETE returns status 200 or 204. The subsequent GET returns status 404, confirming the resource was actually removed and not just flagged client-side.",
+    "priority": "high"
+  },
+  {
+    "id": "API-CRUD-006",
+    "module": "API",
+    "area": "crud",
+    "title": "Updating a test case that does not exist returns 404, not a silent success",
+    "method": "PUT",
+    "endpoint": "/api/testcases/{id}",
+    "preconditions": "The given id does not correspond to any existing test case.",
+    "steps": [
+      "Send PUT /api/testcases/does-not-exist-id with a valid body.",
+      "Inspect the response."
+    ],
+    "expectedResult": "Status 404. No resource is created as a side effect.",
+    "priority": "medium"
+  },
+  {
+    "id": "API-ERR-001",
+    "module": "API",
+    "area": "error_handling",
+    "title": "Creating a test case with a missing required field returns 422",
+    "method": "POST",
+    "endpoint": "/api/testcases",
+    "preconditions": "Caller has a valid token with write permission.",
+    "steps": [
+      "Send POST /api/testcases with a body missing the required 'title' field.",
+      "Inspect the response."
+    ],
+    "expectedResult": "Status 422. Response body identifies 'title' as the invalid/missing field.",
+    "priority": "high"
+  },
+  {
+    "id": "API-ERR-002",
+    "module": "API",
+    "area": "error_handling",
+    "title": "Creating a test case with an invalid enum value for status returns 422",
+    "method": "POST",
+    "endpoint": "/api/testcases",
+    "preconditions": "Caller has a valid token with write permission.",
+    "steps": [
+      "Send POST /api/testcases with status: 'not-a-real-status'.",
+      "Inspect the response."
+    ],
+    "expectedResult": "Status 422. Response body lists the allowed values for 'status'.",
+    "priority": "medium"
+  },
+  {
+    "id": "API-ERR-003",
+    "module": "API",
+    "area": "error_handling",
+    "title": "Requesting a non-existent test case returns 404, not 200 with an empty body",
+    "method": "GET",
+    "endpoint": "/api/testcases/{id}",
+    "preconditions": "The given id does not exist.",
+    "steps": [
+      "Send GET /api/testcases/does-not-exist-id.",
+      "Inspect the response."
+    ],
+    "expectedResult": "Status 404. Response body contains a descriptive error message, not an empty object.",
+    "priority": "high"
+  },
+  {
+    "id": "API-ERR-004",
+    "module": "API",
+    "area": "error_handling",
+    "title": "Sending a malformed JSON body returns 400, not a 500",
+    "method": "POST",
+    "endpoint": "/api/testcases",
+    "preconditions": "Caller has a valid token.",
+    "steps": [
+      "Send POST /api/testcases with a syntactically invalid JSON body (e.g. a trailing comma or unclosed brace).",
+      "Inspect the response."
+    ],
+    "expectedResult": "Status 400. The server does not crash or return a 500-series error; the response indicates the body could not be parsed.",
+    "priority": "high"
+  },
+  {
+    "id": "API-ERR-005",
+    "module": "API",
+    "area": "error_handling",
+    "title": "An unauthenticated write attempt is rejected before any validation of the body",
+    "method": "POST",
+    "endpoint": "/api/testcases",
+    "preconditions": "None.",
+    "steps": [
+      "Send POST /api/testcases with no Authorization header AND an invalid body (missing required fields).",
+      "Inspect the response."
+    ],
+    "expectedResult": "Status 401 (authentication failure takes precedence over 422 body-validation failure). No resource is created.",
+    "priority": "medium"
+  },
+  {
+    "id": "API-ERR-006",
+    "module": "API",
+    "area": "error_handling",
+    "title": "An internal failure surfaces as a well-formed 5xx response, not a raw stack trace",
+    "method": "GET",
+    "endpoint": "/api/testruns",
+    "preconditions": "A dependency of the /api/testruns endpoint (e.g. its datastore) is simulated as unavailable, via test double or fault injection.",
+    "steps": [
+      "With the dependency unavailable, send GET /api/testruns.",
+      "Inspect the response."
+    ],
+    "expectedResult": "Status 5xx (e.g. 503). Response body is a well-formed JSON error object, not a raw stack trace or HTML error page.",
+    "priority": "medium"
+  },
+  {
+    "id": "API-RATE-001",
+    "module": "API",
+    "area": "rate_limiting",
+    "title": "Requests under the rate limit succeed normally",
+    "method": "GET",
+    "endpoint": "/api/testcases",
+    "preconditions": "Caller has a valid token. Assumed limit: 100 requests/minute per token.",
+    "steps": [
+      "Send 50 GET /api/testcases requests within one minute using the same token.",
+      "Inspect all responses."
+    ],
+    "expectedResult": "All 50 requests return status 200.",
+    "priority": "medium"
+  },
+  {
+    "id": "API-RATE-002",
+    "module": "API",
+    "area": "rate_limiting",
+    "title": "Exceeding the rate limit returns 429 with a Retry-After header",
+    "method": "GET",
+    "endpoint": "/api/testcases",
+    "preconditions": "Caller has a valid token. Assumed limit: 100 requests/minute per token.",
+    "steps": [
+      "Send 101 GET /api/testcases requests within one minute using the same token.",
+      "Inspect the 101st response."
+    ],
+    "expectedResult": "The 101st request returns status 429. The response includes a 'Retry-After' header with a positive integer value.",
+    "priority": "high"
+  },
+  {
+    "id": "API-RATE-003",
+    "module": "API",
+    "area": "rate_limiting",
+    "title": "Rate limiting is scoped per token/user, not global",
+    "method": "GET",
+    "endpoint": "/api/testcases",
+    "preconditions": "Two valid tokens exist for two different users. Assumed limit: 100 requests/minute per token.",
+    "steps": [
+      "Using token A, send 100 requests within one minute (reaching its limit).",
+      "Using token B, send 1 request within the same minute."
+    ],
+    "expectedResult": "Token A's 101st request (if attempted) would return 429, but token B's request returns 200 — confirming the limit is per-caller, not shared across all users.",
+    "priority": "medium"
+  },
+  {
+    "id": "API-RATE-004",
+    "module": "API",
+    "area": "rate_limiting",
+    "title": "The rate limit window resets after the stated period",
+    "method": "GET",
+    "endpoint": "/api/testcases",
+    "preconditions": "Caller has already been rate-limited (received a 429).",
+    "steps": [
+      "After receiving a 429, wait for the duration indicated in the 'Retry-After' header.",
+      "Send one more GET /api/testcases request."
+    ],
+    "expectedResult": "Status 200 — the request succeeds once the window has elapsed.",
+    "priority": "low"
+  },
+  {
+    "id": "API-SCHEMA-001",
+    "module": "API",
+    "area": "schema_validation",
+    "title": "A created test case response includes all required fields with correct types",
+    "method": "POST",
+    "endpoint": "/api/testcases",
+    "preconditions": "Caller has a valid token with write permission.",
+    "steps": [
+      "Send POST /api/testcases with a valid body.",
+      "Validate the response body against the expected schema."
+    ],
+    "expectedResult": "Response includes: 'id' (string or integer), 'title' (string), 'status' (string, one of the documented enum values), 'priority' (string, one of the documented enum values), 'createdAt' (ISO 8601 date-time string). No required field is missing or null.",
+    "priority": "high"
+  },
+  {
+    "id": "API-SCHEMA-002",
+    "module": "API",
+    "area": "schema_validation",
+    "title": "A listed test case in GET /api/testcases matches the single-resource schema",
+    "method": "GET",
+    "endpoint": "/api/testcases",
+    "preconditions": "At least one test case exists.",
+    "steps": [
+      "Send GET /api/testcases.",
+      "Validate every item in the returned array against the same schema used for a single GET /api/testcases/{id}."
+    ],
+    "expectedResult": "Every item in the list matches the single-resource schema — list and detail responses are not allowed to silently diverge (e.g. list omitting a field that detail includes).",
+    "priority": "medium"
+  },
+  {
+    "id": "API-SCHEMA-003",
+    "module": "API",
+    "area": "schema_validation",
+    "title": "An extra, unexpected field in the request body does not break the response schema",
+    "method": "POST",
+    "endpoint": "/api/testcases",
+    "preconditions": "Caller has a valid token with write permission.",
+    "steps": [
+      "Send POST /api/testcases with a valid body plus one unexpected extra field, e.g. { title, priority, status, notARealField: 'x' }.",
+      "Validate the response."
+    ],
+    "expectedResult": "Status 201 (extra field is ignored) or 422 with a clear message about the unexpected field — either is acceptable as long as it's consistent and documented, but the response body still matches the required schema either way.",
+    "priority": "low"
+  },
+  {
+    "id": "API-SCHEMA-004",
+    "module": "API",
+    "area": "schema_validation",
+    "title": "Numeric and date fields are not silently returned as strings",
+    "method": "GET",
+    "endpoint": "/api/testruns",
+    "preconditions": "At least one test run exists with a duration and a timestamp.",
+    "steps": [
+      "Send GET /api/testruns.",
+      "Inspect the JSON types of the 'durationMs' and 'startedAt' fields."
+    ],
+    "expectedResult": "'durationMs' is a JSON number, not a numeric string. 'startedAt' is a valid ISO 8601 date-time string.",
+    "priority": "medium"
+  }
+]
