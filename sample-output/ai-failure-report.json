@@ -1,49 +1,61 @@
 [
   {
-    "test": "Login > [AI-DEMO] invalid credentials shows an unrelated error message",
+    "test": "Login > an expired/cleared session redirects protected routes back to login",
     "file": "tests/ui/login.spec.ts",
-    "timestamp": "2026-07-01T16:15:15.682Z",
-    "errorSummary": "Error: expect(locator).toHaveText(expected) failed",
+    "timestamp": "2026-07-01T17:25:08.831Z",
+    "errorSummary": "Error: page.goto: net::ERR_ABORTED at https://opensource-demo.orangehrmlive.com/web/index.php/dashboard/index",
     "analysis": {
-      "explanation": "The test failed because it was expecting a specific error message ('Account locked, contact your administrator') to be displayed on the page, but instead received an unrelated error message ('Invalid credentials'). This suggests that the test is not correctly identifying the expected error message.",
-      "likelyRootCause": "Incorrect locator or selector",
-      "suggestedFix": "Verify that the locator for the alert message is correct and update it if necessary to match the actual HTML structure of the page.",
+      "explanation": "The test failed because it was expecting a redirect back to the login page after an expired/cleared session, but instead, it landed on the dashboard page.",
+      "likelyRootCause": "Session expiration handling",
+      "suggestedFix": "Verify that the session expiration logic is correctly implemented in the application, and ensure that the redirect mechanism for expired sessions is working as expected.",
       "confidence": "high"
     }
   },
   {
     "test": "Login > [AI-DEMO] invalid credentials shows an unrelated error message",
     "file": "tests/ui/login.spec.ts",
-    "timestamp": "2026-07-01T16:15:44.125Z",
+    "timestamp": "2026-07-01T17:25:39.563Z",
     "errorSummary": "Error: expect(locator).toHaveText(expected) failed",
     "analysis": {
-      "explanation": "The test failed because it was expecting a specific error message ('Account locked, contact your administrator') to be displayed on the page after entering invalid credentials, but instead received an unrelated error message ('Invalid credentials').",
-      "likelyRootCause": "The test is too focused on the error message and not enough on the actual behavior of the application.",
-      "suggestedFix": "Update the test to verify that the application displays a generic error message or a meaningful error message related to authentication after entering invalid credentials, rather than expecting a specific hardcoded message.",
+      "explanation": "The test failed because it expected a specific error message ('Account locked, contact your administrator') to be displayed on the page after entering invalid credentials, but instead received an unrelated error message ('Invalid credentials').",
+      "likelyRootCause": "The test is expecting a specific error message that may not be displayed in all scenarios.",
+      "suggestedFix": "Update the expected error message in the test to match the actual error message displayed on the page when entering invalid credentials.",
+      "confidence": "high"
+    }
+  },
+  {
+    "test": "Login > [AI-DEMO] invalid credentials shows an unrelated error message",
+    "file": "tests/ui/login.spec.ts",
+    "timestamp": "2026-07-01T17:26:09.365Z",
+    "errorSummary": "Error: expect(locator).toHaveText(expected) failed",
+    "analysis": {
+      "explanation": "The test failed because it expected a certain text to be present on the page, but the actual text received was different. The test is trying to verify that an error message with \"Account locked, contact your administrator\" is displayed when invalid credentials are entered.",
+      "likelyRootCause": "The locator for the alert content text was not correctly identifying the element containing the expected error message.",
+      "suggestedFix": "Update the locator for the alert content text to include the class or other attributes that uniquely identify the element containing the expected error message, e.g. locator('.oxd-alert-content-text.oxd-text--p')",
       "confidence": "high"
     }
   },
   {
     "test": "[AI-DEMO] product schema check with a deliberately wrong expectation",
     "file": "tests/api/users-api.spec.ts",
-    "timestamp": "2026-07-01T16:16:29.170Z",
+    "timestamp": "2026-07-01T17:26:59.020Z",
     "errorSummary": "Error: expect(received).toBe(expected) // Object.is equality",
     "analysis": {
-      "explanation": "The test failed because it expected the category of a product to be 'electronics', but the actual response from the API showed 'beauty'.",
-      "likelyRootCause": "Inconsistent or incorrect data in the product schema",
-      "suggestedFix": "Verify that the product schema is correctly defined and updated with the correct categories for all products, especially those under the 'beauty' category.",
+      "explanation": "The test failed because it was expecting a specific category ('electronics') but received 'beauty' instead.",
+      "likelyRootCause": "Product schema mismatch",
+      "suggestedFix": "Update the product schema to match the actual category in the response (category: 'beauty')",
       "confidence": "high"
     }
   },
   {
     "test": "[AI-DEMO] product schema check with a deliberately wrong expectation",
     "file": "tests/api/users-api.spec.ts",
-    "timestamp": "2026-07-01T16:16:41.373Z",
+    "timestamp": "2026-07-01T17:27:12.040Z",
     "errorSummary": "Error: expect(received).toBe(expected) // Object.is equality",
     "analysis": {
-      "explanation": "The test failed because it expected the category of the product to be 'electronics', but the actual response from the API showed 'beauty'.",
-      "likelyRootCause": "Incorrect or outdated data in the product schema",
-      "suggestedFix": "Review and update the product schema to ensure that the category is correctly defined as 'beauty'",
+      "explanation": "The test failed because it expected the product category to be 'electronics', but the actual response from the API showed 'beauty'.",
+      "likelyRootCause": "Incorrect data in the product schema",
+      "suggestedFix": "Update the product schema to include a default or fallback value for the category field, so that the test can pass even if the expected value is not present.",
       "confidence": "high"
     }
   }

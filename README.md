@@ -107,6 +107,17 @@ See "Structure" above. First commit message documents which AI tool was used to 
 - `task2-test-generation/generated/dashboard.feature` — Gherkin scenarios for Dashboard.
 - `task2-test-generation/generated/api-tests.json` — structured JSON test cases for the REST API.
 
+To re-run any of the six prompts yourself and see the raw LLM response in your terminal (against
+the local Ollama model, no chat UI needed):
+
+```bash
+npm run try-prompt -- <login|dashboard|api> <v1|v2>
+# e.g.
+npm run try-prompt -- login v2
+```
+
+`v1` is the vague attempt, `v2` is the refined one. See `scripts/run-prompt.js`.
+
 ## Task 3 — LLM integration in the test framework
 
 **Chosen: Option A — Failure Explainer**, over Option B (Flaky Test Classifier). Reasoning
