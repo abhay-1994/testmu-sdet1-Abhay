@@ -44,6 +44,9 @@ shared public demo would lock out the real `Admin` account for every other candi
 │   └── api/                # REST API specs (DummyJSON), + AI fixture
 ├── reporters/
 │   └── ai-summary-reporter.ts   # Console summary of AI analyses at the end of a run
+├── scripts/
+│   ├── run-prompt.js        # Run any Task 2 prompt against Ollama, print response to terminal
+│   └── check-results.js     # CI helper: fail the build only on unexpected (non [AI-DEMO]) failures
 ├── task2-test-generation/
 │   ├── prompts.md           # Task 2 — raw prompts, exactly as used
 │   └── generated/           # Task 2 — generated Gherkin/JSON test cases + per-module notes
@@ -92,6 +95,13 @@ exist solely to exercise Task 3 end-to-end without needing a flaky real bug on d
 set to `1` in `playwright.config.ts` to absorb the occasional slow response from the shared public
 OrangeHRM demo — the two intentional failures still fail identically on retry, since they're
 deterministic wrong assertions, not flaky ones.
+
+## CI
+
+`.github/workflows/tests.yml` runs typecheck + the full suite on every push/PR to `main` — it
+installs Ollama and pulls `llama3.2` itself (no secret required), then `scripts/check-results.js`
+fails the build only if a test *other than* the two intentional `[AI-DEMO]` failures fails, so a
+real regression still goes red.
 
 ## Task 1 — Setup and scaffold
 
@@ -175,10 +185,11 @@ was asked to do, and what it produced.
 - **Self-healing selectors**: when a UI test fails on a selector-not-found error specifically
   (as opposed to an assertion mismatch), ask the local model to suggest an updated selector from
   the live DOM snapshot, and report the suggested diff instead of only an explanation.
-- **Keep the model warm across a run**: Ollama unloads a model from memory after a period of
-  inactivity by default. For a CI suite producing many failures in quick succession, passing
-  `keep_alive` on each request (or a small local warm-up call at `globalSetup`) would avoid
-  paying reload latency on the first failure analysis of a run.
+- **Pre-warm the model before the first failure, not just between failures**: `llmClient.ts`
+  already sends `keep_alive: '10m'` on every request, so the model stays loaded between the 2nd,
+  3rd, etc. failure analyses in a run. It doesn't help the *first* one, which still pays a cold
+  10-15s load. A small warm-up call in Playwright's `globalSetup` (before any test runs) would
+  close that gap too.
 - **A pluggable provider layer**: `src/ai/llmClient.ts` currently hard-codes Ollama. Extracting a
   small `LlmProvider` interface would let this same fixture call a hosted API (Claude, etc.)
   behind an env var, for teams that want centralized/hosted analysis instead of a local model per
