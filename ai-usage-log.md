@@ -1,0 +1,27 @@
+# AI Usage Log
+
+Every AI tool used while building this repo, what it was asked to do, and what it produced.
+One tool was used throughout: **Claude Code** (CLI agent, model `claude-sonnet-5`, via Anthropic's
+Claude API — Claude Code is what actually wrote every file in this repo; the model backing the
+runtime Task 3 integration is `claude-opus-4-8`, selected separately for that use case).
+
+| # | Task | What Claude Code was asked to do | What it produced |
+|---|---|---|---|
+| 1 | Planning | Given the assessment PDF, propose a stack, target-app strategy (since no real TestMu AI instance/credentials exist), and a file structure before writing any code. | The plan presented to the user up front: TypeScript + Playwright, OrangeHRM demo for Login/Dashboard, DummyJSON for the REST API, Option A (Failure Explainer) for Task 3, and the repo layout in "Structure" in `README.md`. |
+| 2 | Task 1 — Scaffold | Initialize the npm project, install `@playwright/test`, `typescript`, `dotenv`, `@anthropic-ai/sdk`, `ajv`; write `tsconfig.json`, `playwright.config.ts`, `.gitignore`, `.env.example`. | All config files in the repo root, plus the `src/`, `tests/`, `reporters/`, `task2-test-generation/`, `sample-output/` folder structure. |
+| 3 | Task 1 — Live-site discovery | Rather than guess selectors, drive a real headless browser (Playwright, launched by Claude Code) against `opensource-demo.orangehrmlive.com` and `dummyjson.com` to discover actual DOM selectors, real error text, real dashboard widget names, real mobile-layout behavior, and real API status codes/schemas — then delete the scratch scripts. | Verified, real selectors used in `src/pages/LoginPage.ts` and `src/pages/DashboardPage.ts` (e.g. `.oxd-alert-content-text`, `.orangehrm-dashboard-widget-header`, `.oxd-topbar-header-hamburger`), and verified real API behavior used in `src/api/schemas.ts` and `tests/api/users-api.spec.ts`. This step caught two wrong assumptions before they shipped: the mobile "hamburger" selector was initially guessed wrong (`.oxd-main-menu-button`, which is a desktop-only sidebar-collapse button) and corrected to `.oxd-topbar-header-hamburger` after visual inspection of a captured screenshot; and `reqres.in` (the originally planned API target) turned out to now require a paid API key, which was discovered by an actual failed request, not by guessing — DummyJSON was substituted instead. |
+| 4 | Task 1 — Page objects & specs | Write `LoginPage.ts`, `DashboardPage.ts`, and the Playwright specs in `tests/ui/` and `tests/api/`, then actually run them repeatedly against the live demo apps and fix real failures (a flaky mobile-viewport assertion, a real `beforeEach` timeout caused by the shared demo's latency) until the suite was stable. | `src/pages/*.ts`, `tests/ui/login.spec.ts`, `tests/ui/dashboard.spec.ts`, `tests/api/users-api.spec.ts`, and the `retries: 1` config decision in `playwright.config.ts`, made after observing a real timeout during a full-suite run, not preemptively. |
+| 5 | Task 2 — Prompt engineering | For each of Login, Dashboard, and REST API: draft a deliberately vague first prompt, evaluate why its output wasn't usable, then draft and iterate a refined prompt, and generate the final Gherkin/JSON test cases from the refined prompt. | `task2-test-generation/prompts.md` (every prompt, verbatim, plus per-module notes on what changed) and `task2-test-generation/generated/{login.feature, dashboard.feature, api-tests.json}`. |
+| 6 | Task 3 — LLM integration | Design and implement a real Claude API call wired into the Playwright framework itself (not a side chatbot): an `auto` fixture that, on test failure, gathers page/API context and calls `client.messages.create()` with a JSON-schema-constrained output, then attaches the result to the test report. | `src/ai/llmClient.ts`, `src/ai/failureExplainer.ts`, `src/ai/context.ts`, `src/ai/pageContext.ts`, `src/ai/sampleOutput.ts`, `tests/ui/fixtures.ts`, `tests/api/fixtures.ts`, `reporters/ai-summary-reporter.ts`, and two intentionally-wrong assertions (tagged `[AI-DEMO]`) added specifically to give the integration something real to analyze on every run. |
+| 7 | Task 3 — Verification | Run the full suite with `ANTHROPIC_API_KEY` unset to confirm the integration fails closed (skips cleanly with an explanatory attachment) rather than crashing the whole run. | Confirmed via `npm test`; documented honestly in `sample-output/README.md` that a real API key was not available in this environment to capture a genuine Claude response, rather than fabricating one. |
+| 8 | Docs | Write `README.md`, `sample-output/README.md`, and this file. | This file, plus the two README files. |
+
+## What Claude Code did *not* do
+
+- It did not fabricate a sample LLM response for Task 3. `sample-output/ai-failure-report.json`
+  is `[]` in this submission because no `ANTHROPIC_API_KEY` was available in the build
+  environment — see `sample-output/README.md` for exact reproduction steps.
+- It did not automate the brute-force-lockout scenario from Task 2 against the live shared
+  OrangeHRM demo, since doing so would lock the real `Admin` account for other users of that
+  public instance. That scenario exists only as a documented Gherkin case with an explicit
+  safety warning.
