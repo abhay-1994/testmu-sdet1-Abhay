@@ -7,7 +7,7 @@ const SAMPLE_OUTPUT_PATH = path.join(process.cwd(), 'sample-output', 'ai-failure
 
 /**
  * Prints a console summary of every AI failure analysis collected during the run
- * (via src/ai/failureExplainer.ts) once the run finishes. This does not call Claude
+ * (via src/ai/failureExplainer.ts) once the run finishes. This does not call the LLM
  * itself — it just aggregates what the per-test fixture already attached, so the
  * "AI usage" is visible without needing to open the full HTML report.
  */
@@ -28,7 +28,7 @@ export default class AiSummaryReporter implements Reporter {
 
     if (records.length === 0) return;
 
-    console.log('\n=== AI Failure Analysis Summary (Claude) ===');
+    console.log('\n=== AI Failure Analysis Summary (Ollama) ===');
     for (const record of records) {
       console.log(`\n- ${record.test}`);
       console.log(`  error: ${record.errorSummary}`);

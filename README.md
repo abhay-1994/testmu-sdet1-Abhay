@@ -1,8 +1,8 @@
 # testmu-sdet1-abhay
 
 AI-native regression suite built for the TestMu AI SDET-1 assessment. Playwright + TypeScript,
-with Claude wired into both the test-generation workflow (Task 2) and the running test framework
-itself (Task 3 — a real-time AI Failure Explainer).
+with Claude Code used to generate the Task 2 test cases, and a local **Ollama** model wired
+directly into the running test framework itself for Task 3 — a real-time AI Failure Explainer.
 
 ## Important assumption — target application
 
@@ -29,7 +29,7 @@ shared public demo would lock out the real `Admin` account for every other candi
 ## Stack
 
 - **Playwright Test** (`@playwright/test`) + **TypeScript**
-- **Anthropic SDK** (`@anthropic-ai/sdk`) — real Claude API calls, no mocking
+- **Ollama** (local LLM runtime) — real inference calls over its local REST API, no mocking, no cloud key
 - **ajv** — JSON Schema validation for API responses
 
 ## Structure
@@ -38,7 +38,7 @@ shared public demo would lock out the real `Admin` account for every other candi
 ├── src/
 │   ├── pages/            # Page Object Models (LoginPage, DashboardPage)
 │   ├── api/               # API client helper + response JSON Schemas
-│   └── ai/                 # Claude client, failure-explainer logic, shared context
+│   └── ai/                 # Ollama client, failure-explainer logic, shared context
 ├── tests/
 │   ├── ui/                 # Login + Dashboard specs (OrangeHRM demo), + AI fixture
 │   └── api/                # REST API specs (DummyJSON), + AI fixture
@@ -59,12 +59,19 @@ shared public demo would lock out the real `Admin` account for every other candi
 ```bash
 npm install
 npx playwright install chromium
-cp .env.example .env   # then add your ANTHROPIC_API_KEY
+
+# Task 3 (AI Failure Explainer) needs a local Ollama model — no cloud API key required:
+#   1. Install Ollama: https://ollama.com/download
+#   2. ollama pull llama3.2
+#   3. Ollama's installer starts the server automatically; otherwise run `ollama serve`
+
+cp .env.example .env   # defaults already point at a standard local Ollama install
 ```
 
-`ANTHROPIC_API_KEY` is only required for Task 3 (the AI Failure Explainer). Everything else runs
-without it — the login/dashboard/API tests themselves don't call Claude; only the failure-analysis
-fixture does, and only when a test actually fails.
+Ollama is only required for Task 3. Everything else runs without it — the login/dashboard/API
+tests themselves don't call any LLM; only the failure-analysis fixture does, and only when a test
+actually fails. If Ollama isn't running, that fixture skips cleanly with an explanatory attachment
+instead of failing the whole suite.
 
 ## Running
 
@@ -79,8 +86,8 @@ npm run typecheck      # tsc --noEmit
 
 The suite is 20 tests: 18 pass against the live demo apps, and **2 are deliberately wrong on
 purpose** (tagged `[AI-DEMO]` in `tests/ui/login.spec.ts` and `tests/api/users-api.spec.ts`) so
-that every run of `npm test` produces a real, reproducible failure for Claude to analyze — one
-using page-state context, one using API-response context. They are not bugs in the demo apps; they
+that every run of `npm test` produces a real, reproducible failure for the local LLM to analyze —
+one using page-state context, one using API-response context. They are not bugs in the demo apps; they
 exist solely to exercise Task 3 end-to-end without needing a flaky real bug on demand. Retries are
 set to `1` in `playwright.config.ts` to absorb the occasional slow response from the shared public
 OrangeHRM demo — the two intentional failures still fail identically on retry, since they're
@@ -107,7 +114,12 @@ See "Structure" above. First commit message documents which AI tool was used to 
 classify against — it's not meaningfully demonstrable from a single `npm test` invocation the way
 this assessment will be run and reviewed. A failure explainer produces real, verifiable output
 from one run, with a real error and real page/API context, which is a more honest demonstration of
-an actual LLM API call doing something a reviewer can independently check.
+an actual LLM call doing something a reviewer can independently check.
+
+**LLM provider — Ollama, running locally.** No cloud account, API key, or billing is needed to
+review this: install Ollama, pull one model, and the integration works end to end offline. This
+was a deliberate choice over a hosted API for this repo — see `ai-usage-log.md` for the full
+reasoning trail.
 
 **How it works:**
 
@@ -117,19 +129,21 @@ an actual LLM API call doing something a reviewer can independently check.
    (`src/ai/pageContext.ts`), or the last recorded API request/response for API tests
    (`src/ai/context.ts`, populated by `src/api/apiClient.ts`) — and calls
    `explainFailure()` in `src/ai/llmClient.ts`.
-3. `explainFailure()` makes a real `client.messages.create()` call to Claude
-   (`claude-opus-4-8` by default, configurable via `ANTHROPIC_MODEL`) with a JSON-schema-constrained
-   output: `explanation`, `likelyRootCause`, `suggestedFix`, `confidence`.
+3. `explainFailure()` makes a real HTTP call to a local Ollama server
+   (`http://localhost:11434/api/chat`, model `llama3.2` by default — configurable via
+   `OLLAMA_BASE_URL` / `OLLAMA_MODEL`) using Ollama's structured-output support (a JSON Schema
+   passed as the `format` field) so the response is guaranteed to parse into
+   `{ explanation, likelyRootCause, suggestedFix, confidence }`.
 4. The result is attached to the test via `testInfo.attach()` — so it shows up as an
    `ai-failure-analysis.md` attachment directly inside the Playwright HTML report, next to the
    trace and screenshot — and appended to `sample-output/ai-failure-report.json`.
 5. `reporters/ai-summary-reporter.ts` prints a short console summary at the end of the run.
+6. If Ollama isn't reachable (`src/ai/llmClient.ts`'s `isOllamaReachable()` check), the fixture
+   attaches a plain-text explanation instead of failing the whole suite — see
+   `src/ai/failureExplainer.ts`.
 
-**On sample output:** no `ANTHROPIC_API_KEY` was available in the environment this was built in.
-The integration code is complete, real, and exercised (the "skip cleanly with no key" path in
-`src/ai/failureExplainer.ts` is itself tested and working), but the actual Claude response could
-not be captured here. See `sample-output/README.md` for exact steps to generate real output in
-under a minute once you add a key — it only costs two Claude calls per run.
+See `sample-output/README.md` for real, captured output from a run against this repo's own
+`[AI-DEMO]` failures.
 
 ## ai-usage-log.md
 
@@ -148,11 +162,16 @@ was asked to do, and what it produced.
   `task2-test-generation/generated/api-tests.json` could become an executable suite too, instead
   of staying documentation-only.
 - **Self-healing selectors**: when a UI test fails on a selector-not-found error specifically
-  (as opposed to an assertion mismatch), ask Claude to suggest an updated selector from the live
-  DOM snapshot, and report the suggested diff instead of only an explanation.
-- **Prompt caching** on the failure-explainer system context (tool descriptions, output schema) —
-  currently each call is a cold, single-turn request since call volume is low, but a CI suite
-  producing dozens of failures per run would benefit from caching the fixed parts of the prompt.
+  (as opposed to an assertion mismatch), ask the local model to suggest an updated selector from
+  the live DOM snapshot, and report the suggested diff instead of only an explanation.
+- **Keep the model warm across a run**: Ollama unloads a model from memory after a period of
+  inactivity by default. For a CI suite producing many failures in quick succession, passing
+  `keep_alive` on each request (or a small local warm-up call at `globalSetup`) would avoid
+  paying reload latency on the first failure analysis of a run.
+- **A pluggable provider layer**: `src/ai/llmClient.ts` currently hard-codes Ollama. Extracting a
+  small `LlmProvider` interface would let this same fixture call a hosted API (Claude, etc.)
+  behind an env var, for teams that want centralized/hosted analysis instead of a local model per
+  developer machine.
 - **A second executable pass at the brute-force lockout scenario** from Task 2, against a
   disposable, self-hosted OrangeHRM instance (e.g. the official Docker image) instead of the
   shared public demo, so it can be safely automated rather than left as documentation-only.

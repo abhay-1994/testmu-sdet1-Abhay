@@ -7,7 +7,8 @@ type AiFixtures = {
 };
 
 /** Extends the base Playwright test with an auto-fixture that, on failure, sends the last
- *  observed API request/response + error to Claude and attaches the explanation to the report. */
+ *  observed API request/response + error to a local Ollama model and attaches the explanation
+ *  to the report. */
 export const test = base.extend<AiFixtures>({
   aiFailureAnalysis: [
     async ({}, use, testInfo) => {

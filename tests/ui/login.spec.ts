@@ -55,8 +55,8 @@ test.describe('Login', () => {
   });
 
   // Intentionally-wrong assertion — kept in the suite on purpose to produce a real,
-  // reproducible failure for Task 3 (AI Failure Explainer). Claude is sent this test's
-  // real error message + live page state and returns a plain-English root cause and fix;
+  // reproducible failure for Task 3 (AI Failure Explainer). A local Ollama model is sent this
+  // test's real error message + live page state and returns a plain-English root cause and fix;
   // see the "ai-failure-analysis.md" attachment on this test in the HTML report, and
   // sample-output/ai-failure-report.json for a saved copy. Safe to delete once you've
   // seen the integration work — it does not test real product behavior.

@@ -5,7 +5,12 @@ dotenv.config();
 
 export default defineConfig({
   testDir: './tests',
-  timeout: 30_000,
+  // 90s, not the usual 30s: on a failing test, the "aiFailureAnalysis" fixture teardown makes
+  // a real call to a local Ollama model (src/ai/llmClient.ts), which can take 10-15s just to
+  // load the model into memory on a cold start plus generation time. That call has its own
+  // 60s bound (CHAT_TIMEOUT_MS) — this test timeout just needs to be larger than that plus the
+  // test's own actions, or a slow-to-analyze failure would itself time out during teardown.
+  timeout: 90_000,
   expect: { timeout: 8_000 },
   fullyParallel: false,
   // The UI suite hits a shared public demo instance (opensource-demo.orangehrmlive.com),

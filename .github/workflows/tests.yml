@@ -18,6 +18,16 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run typecheck
 
+      # Task 3 (AI Failure Explainer) runs against a local Ollama model, not a cloud API —
+      # install it and pull a small model so the integration is exercised for real in CI too,
+      # not just skipped.
+      - name: Install and start Ollama
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          ollama serve &
+          for i in $(seq 1 30); do curl -sf http://localhost:11434/api/tags > /dev/null && break; sleep 1; done
+          ollama pull llama3.2
+
       # Two tests (tagged [AI-DEMO]) are deliberately wrong on purpose, to guarantee a real
       # failure for the Task 3 AI Failure Explainer to analyze on every run — see README.md.
       # `continue-on-error` lets the job proceed to the check below instead of going red on
@@ -27,8 +37,6 @@ jobs:
         id: playwright
         continue-on-error: true
         run: npm test
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Fail the build only on unexpected failures
         run: node scripts/check-results.js
