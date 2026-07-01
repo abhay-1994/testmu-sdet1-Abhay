@@ -3,6 +3,13 @@ import type { TestInfo, TestInfoError } from '@playwright/test';
 import { explainFailure, isOllamaReachable, type FailureAnalysis } from './llmClient';
 import { appendSampleOutput } from './sampleOutput';
 
+// Why Option A (Failure Explainer) over Option B (Flaky Test Classifier): a flaky-test
+// classifier needs a *history* of runs to classify against, so it isn't meaningfully
+// demonstrable from a single `npm test` invocation. A failure explainer produces real,
+// independently-checkable output from one run — a real error plus real page/API context in,
+// a plain-English explanation out — which is a more honest demonstration of an LLM call doing
+// something a reviewer can verify without needing to run the suite N times first.
+
 // Built from String.fromCharCode rather than a regex literal containing a raw escape byte,
 // so the source file doesn't carry an invisible control character.
 const ANSI_ESCAPE_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');

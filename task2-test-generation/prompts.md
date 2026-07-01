@@ -1,8 +1,9 @@
 # Task 2 — Prompts (raw, exactly as written)
 
-All prompts below were sent to Claude (claude-opus-4-8, via Claude Code / the Claude API — same
-model backing this repo's Task 3 integration) to generate regression test cases for TestMu AI's
-Login, Dashboard, and REST API modules. Each module shows the **first prompt I tried**, why the
+All prompts below were sent to Claude (claude-opus-4-8, via Claude Code / the Claude API) to
+generate regression test cases for TestMu AI's Login, Dashboard, and REST API modules. Task 3's
+runtime integration uses a different model (Ollama, running locally) for reasons unrelated to
+Task 2 — see `ai-usage-log.md` row 9. Each module shows the **first prompt I tried**, why the
 output wasn't good enough to ship, and the **refined prompt** whose output is what actually lives
 in `task2-test-generation/generated/`. Nothing below has been cleaned up after the fact — including
 the awkward phrasing in a couple of the v1 attempts.
@@ -70,18 +71,13 @@ SQL-injection-shaped input never came up unless asked for by name.
 
 ### Notes — what didn't work the first time, and what changed
 
-The vague prompt's output is more thorough on raw coverage than I expected — it does surface
-session timeout and repeated-failed-login lockout on its own — but it has no Given/When/Then
-structure, no data tables, no explicit lockout threshold, and none of the security-specific edge
-cases (case sensitivity, whitespace, SQL-injection-shaped input) that actually matter for a login
-module. The refined prompt fixed this by (1) naming the exact five areas the ticket asked for so
-nothing got silently dropped, (2) forcing Gherkin structure and tagging so the output is
-automation-ready rather than descriptive, and (3) explicitly asking for edge cases instead of
-trusting the model to volunteer them — the case-sensitivity and SQL-injection-shaped-input
-scenarios only appeared after I asked for them by name. I also had to explicitly say "don't run
-lockout against a shared environment" — my first refined draft (not shown) generated a lockout
-scenario with no safety caveat, and I did not want an automation engineer to accidentally lock out
-a real demo/shared account by running it as-is.
+The vague prompt does surface session timeout and lockout on its own, but with no Gherkin
+structure, no tags, and none of the security edge cases (case sensitivity, whitespace,
+SQL-injection-shaped input) a login module needs. The refined prompt fixed this by naming all five
+required areas explicitly, forcing Gherkin structure and tagging, and asking for edge cases by
+name — they didn't appear until asked for directly. I also had to explicitly require a "don't run
+against a shared environment" caveat: an earlier refined draft (not shown) produced a lockout
+scenario with no safety warning.
 
 ---
 
@@ -129,17 +125,13 @@ case at all.
 
 ### Notes — what didn't work the first time, and what changed
 
-The first attempt covered more ground than "generic CRUD" on individual features (it does test
-filter and sort), but it never engaged with the fact that a dashboard is a composite of
-independently failing widgets — it produced page-level smoke tests, not widget-level ones, which is
-the wrong granularity for a regression suite (a partial failure on one widget would pass every one
-of those tests, and role-based visibility wasn't tested at all). The refined prompt named the
-widget-composition model explicitly and asked for partial-failure coverage, which is the scenario
-that actually earns its place in a regression suite. I also had to push back on "data accuracy"
-specifically: my first draft of the refined prompt just said "verify data is accurate," and the
-model returned a scenario that said "the dashboard shows correct data" with no way to verify that
-automatically — I re-prompted with the API cross-check framing so the resulting scenario is
-actually testable by an automation engineer instead of requiring a human to eyeball a chart.
+The first attempt does test filter and sort, but it never engages with the dashboard as a
+composite of independently-failing widgets — it produces page-level smoke tests, so a partial
+failure on one widget would pass every one of them, and role-based visibility isn't tested at all.
+The refined prompt named the widget-composition model explicitly and asked for partial-failure
+coverage. I also had to push back on "data accuracy": an early draft just said "verify data is
+accurate" and got back an untestable "the dashboard shows correct data" — re-prompting with the
+API cross-check framing made the scenario actually assertable.
 
 ---
 
@@ -189,16 +181,12 @@ only ever reaching for generic 401/400.
 
 ### Notes — what didn't work the first time, and what changed
 
-The vague version didn't lack effort or detail — it just didn't know the *real* API surface, so it
-confidently invented its own endpoints and resource names instead of testing the actual system
-under test, and it never touched rate limiting, schema validation, or status-code granularity
-because nothing in the prompt told it those mattered. The refined prompt fixed this by giving
-Claude the concrete resource model up front (a thing a real ticket or OpenAPI spec would provide)
-and by asking for a structured JSON schema instead of prose, which forced status-code-level
-specificity per case. The first pass at the refined prompt still returned every 4xx case as generic
-"returns 400" — I had to explicitly enumerate 401 vs. 403 vs. 404 vs. 422 by name before the model
-differentiated "not authenticated" from "not authorized" from "not found" from "validation failed,"
-which are meaningfully different behaviors an automation engineer needs to assert on separately.
+The vague version confidently invented its own endpoints and resource names instead of testing the
+actual system under test, and never touched rate limiting, schema validation, or status-code
+granularity since nothing told it those mattered. The refined prompt fixed this by giving the
+concrete resource model up front and asking for a structured JSON schema instead of prose. The
+first pass at the refined prompt still returned every 4xx case as generic "returns 400" — I had to
+enumerate 401 vs. 403 vs. 404 vs. 422 by name before it differentiated them.
 
 ---
 
